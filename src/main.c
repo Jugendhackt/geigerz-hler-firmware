@@ -8,12 +8,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#define BAUDRATE B9600
+#define GGZ_BAUDRATE B9600
+#define GPS_BAUDRATE B115200
 #define SEND_TIME 60
 
 void printhelp(char *command)
 {
-	printf("Usage: %s [uartdevice]\n", command);
+	printf("Usage: %s [geigerzaehler] [gpsdongle]\n", command);
 }
 
 void timer_init(struct timeval tv, time_t sec)
@@ -37,45 +38,71 @@ int check_timer(struct timeval tv, time_t sec)
 
 int main(int argc, char *argv[])
 {
-	int fd, cps, cpm;
+	int geigerzaehler, gps, cps, cpm;
 	struct termios tp;
 	char buffer[100];
 	ssize_t length;
 	float usvhr;
 	struct timeval tv;
 
-	if (argc != 2) {
+	if (argc != 3) {
 		printhelp(argv[0]);
 		return 1;
 	}
 
-	fd = open(argv[1], O_RDONLY | O_NOCTTY |O_NDELAY);
-	if (fd < 0) {
+	geigerzaehler = open(argv[1], O_RDONLY | O_NOCTTY |O_NDELAY);
+	if (geigerzaehler < 0) {
 		perror(argv[1]);
 	}
 
-	fcntl(fd, F_SETFL, 0);
+	fcntl(geigerzaehler, F_SETFL, 0);
 	bzero(&tp, sizeof(tp));
 
-	tp.c_cflag = BAUDRATE | CRTSCTS | CS8 | CLOCAL | CREAD;
+	tp.c_cflag = GGZ_BAUDRATE | CRTSCTS | CS8 | CLOCAL | CREAD;
 	tp.c_iflag = IGNPAR | ICRNL;
 	tp.c_lflag = ICANON;
 
-	tcsetattr(fd, TCSANOW, &tp);
+	tcsetattr(geigerzaehler, TCSANOW, &tp);
+
+	gps = open(argv[1], O_RDONLY | O_NOCTTY |O_NDELAY);
+	if (gps < 0) {
+		perror(argv[1]);
+	}
+
+	fcntl(gps, F_SETFL, 0);
+	bzero(&tp, sizeof(tp));
+
+	tp.c_cflag = GPS_BAUDRATE | CRTSCTS | CS8 | CLOCAL | CREAD;
+	tp.c_iflag = IGNPAR | ICRNL;
+	tp.c_lflag = ICANON;
+
+	tcsetattr(gps, TCSANOW, &tp);
 
 	timer_init(tv, SEND_TIME);
 
 	for (;;) {
-		length = read(fd, &buffer, sizeof(buffer));
+		length = read(geigerzaehler, &buffer, sizeof(buffer));
 
 		if (length < 0) {
 			fprintf(stderr, "Error opening device: %s\n", argv[1]);
 			return -1;
 		}
 		if (length > 0) {
+			/* parse geigerzaehler data */
 			buffer[length] = '\0';
 			sscanf(buffer, "CPS, %d, CPM, %d, uSv/hr, %f", &cps, &cpm, &usvhr);
 			printf("cps: %d\ncpm: %d\nuSv/hr: %f\n", cps, cpm, usvhr);
+		}
+
+		length = read(gps, &buffer, sizeof(buffer));
+
+		if (length < 0) {
+			fprintf(stderr, "Error opening device: %s\n", argv[1]);
+                        return -1;
+		}
+		if (length > 0) {
+			/* parse gps data */
+			buffer[length] = '\0';
 		}
 		if (check_timer(tv, SEND_TIME)) {
 			/* send a packet */
