@@ -13,9 +13,6 @@
 #define GPS_BAUDRATE B115200
 #define SEND_TIME 60
 
-
-
-
 void send_data(char *data[]){
 
 	CURL *curl;
