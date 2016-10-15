@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
 	gps = open(argv[2], O_RDONLY | O_NOCTTY |O_NDELAY);
 	if (gps < 0) {
-		perror(argv[1]);
+		perror(argv[2]);
 	}
 
 	fcntl(gps, F_SETFL, 0);
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 		length = read(gps, &buffer, sizeof(buffer));
 
 		if (length < 0) {
-			fprintf(stderr, "Error opening device: %s\n", argv[1]);
+			fprintf(stderr, "Error opening device: %s\n", argv[2]);
                         return -1;
 		}
 		if (length > 0) {
