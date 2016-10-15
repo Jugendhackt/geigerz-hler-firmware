@@ -9,31 +9,12 @@
 #include <fcntl.h>
 
 #define GGZ_BAUDRATE B9600
-#define GPS_BAUDRATE B115200
-#define SEND_TIME 60
+#define GPS_BAUDRATE B9600
+#define SEND_TIME 10
 
 void printhelp(char *command)
 {
 	printf("Usage: %s [geigerzaehler] [gpsdongle]\n", command);
-}
-
-void timer_init(struct timeval tv, time_t sec)
-{
-	gettimeofday(&tv, NULL);
-	tv.tv_sec += sec;
-}
-
-int check_timer(struct timeval tv, time_t sec)
-{
-	struct timeval ct;
-	gettimeofday(&ct, NULL);
-
-	if (ct.tv_sec > tv.tv_sec) {
-		timer_init(tv, sec);
-		return 1;
-	}
-
-	return -1;
 }
 
 int main(int argc, char *argv[])
@@ -43,7 +24,7 @@ int main(int argc, char *argv[])
 	char buffer[100];
 	ssize_t length;
 	float usvhr, lon, lat;
-	struct timeval tv;
+	struct timeval tv, ct;
 
 	if (argc != 3) {
 		printhelp(argv[0]);
@@ -78,7 +59,8 @@ int main(int argc, char *argv[])
 
 	tcsetattr(gps, TCSANOW, &tp);
 
-	timer_init(tv, SEND_TIME);
+	gettimeofday(&tv, NULL);
+	tv.tv_sec += SEND_TIME;
 
 	for (;;) {
 		length = read(geigerzaehler, &buffer, sizeof(buffer));
@@ -87,12 +69,14 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error opening device: %s\n", argv[1]);
 			return -1;
 		}
-		if (length > 0) {
+		if (length > 0 && buffer[0] != '\n') {
 			/* parse geigerzaehler data */
 			buffer[length] = '\0';
-			sscanf(buffer, "CPS, %*d, CPM, %*d, uSv/hr, %f,%*s", &usvhr);
+			sscanf(buffer, "CPS, %*d, CPM, %*d, uSv/hr, %f%*s", &usvhr);
 			printf("uSv/hr: %f\n", usvhr);
 		}
+		length = 0;
+
 		length = read(gps, &buffer, sizeof(buffer));
 
 		if (length < 0) {
@@ -103,8 +87,13 @@ int main(int argc, char *argv[])
 			/* parse gps data */
 			buffer[length] = '\0';
 		}
-		if (check_timer(tv, SEND_TIME)) {
+
+		gettimeofday(&ct, NULL);
+
+		if (ct.tv_sec > tv.tv_sec) {
 			/* send a packet */
+			gettimeofday(&tv, NULL);
+			tv.tv_sec += SEND_TIME;
 		}
 	}
 
