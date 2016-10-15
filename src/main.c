@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 
 	tcsetattr(geigerzaehler, TCSANOW, &tp);
 
-	gps = open(argv[1], O_RDONLY | O_NOCTTY |O_NDELAY);
+	gps = open(argv[2], O_RDONLY | O_NOCTTY |O_NDELAY);
 	if (gps < 0) {
 		perror(argv[1]);
 	}
