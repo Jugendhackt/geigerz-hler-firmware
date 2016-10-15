@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	struct termios tp;
 	char buffer[100];
 	ssize_t length;
-	float usvhr;
+	float usvhr, lon, lat;
 	struct timeval tv;
 
 	if (argc != 3) {
@@ -90,10 +90,9 @@ int main(int argc, char *argv[])
 		if (length > 0) {
 			/* parse geigerzaehler data */
 			buffer[length] = '\0';
-			sscanf(buffer, "CPS, %d, CPM, %d, uSv/hr, %f", &cps, &cpm, &usvhr);
-			printf("cps: %d\ncpm: %d\nuSv/hr: %f\n", cps, cpm, usvhr);
+			sscanf(buffer, "CPS, %*d, CPM, %*d, uSv/hr, %f,%*s", &usvhr);
+			printf("uSv/hr: %f\n", usvhr);
 		}
-
 		length = read(gps, &buffer, sizeof(buffer));
 
 		if (length < 0) {
