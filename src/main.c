@@ -1,4 +1,5 @@
 #include <sys/time.h>
+#include <time.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -8,12 +9,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <curl/curl.h>
+#include <nmea/nmea.h>
 
 #define GGZ_BAUDRATE B9600
 #define GPS_BAUDRATE B115200
 #define SEND_TIME 10
 
-void send_data(char *data[])
+void send_data(char *data)
 {
 	CURL *curl;
 	CURLcode res;
@@ -57,6 +59,13 @@ int main(int argc, char *argv[])
 	ssize_t length;
 	float usvhr, lon, lat;
 	struct timeval tv, ct;
+
+	nmeaINFO info;
+	nmeaPOS pos;
+	nmeaPARSER parser;
+
+	nmea_zero_INFO(&info);
+	nmea_parser_init(&parser);
 
 	if (argc != 3) {
 		printhelp(argv[0]);
@@ -122,6 +131,8 @@ int main(int argc, char *argv[])
 		if (length > 0 && buffer[0] != '\n') {
 			/* parse gps data */
 			buffer[length] = '\0';
+			nmea_parse(&parser, buffer, (int)strlen(buffer), &info);
+        		nmea_info2pos(&info, &pos);
 			printf("%s", buffer);
 		}
 
@@ -131,8 +142,23 @@ int main(int argc, char *argv[])
 			/* send a packet */
 			gettimeofday(&tv, NULL);
 			tv.tv_sec += SEND_TIME;
+
+			uint32_t timestamp = (unsigned)time(NULL);
+
+    			size_t needed = snprintf(NULL, 0, "{\"location\":\"POINT(%f %f)\", \"time\":%u", pos.lat, pos.lon, timestamp);
+
+    			char *str = malloc(needed);
+
+    			sprintf(str, "{\"location\":\"POINT(%f %f)\", \"uSv\": %f, \"time\":%u}", pos.lat, pos.lon, usvhr, timestamp);
+
+			send_data(str);
+
+			free(str);
+
 		}
 	}
+
+	nmea_parser_destroy(&parser);
 
 	return 1;
 }
