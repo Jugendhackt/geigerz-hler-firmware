@@ -133,6 +133,9 @@ int main(int argc, char *argv[])
 			buffer[length] = '\0';
 			nmea_parse(&parser, buffer, (int)strlen(buffer), &info);
         		nmea_info2pos(&info, &pos);
+
+			printf("%f %f", info.lat, info.lon);
+			
 			printf("%s", buffer);
 		}
 
