@@ -10,7 +10,7 @@
 #include <curl/curl.h>
 
 #define GGZ_BAUDRATE B9600
-#define GPS_BAUDRATE B9600
+#define GPS_BAUDRATE B115200
 #define SEND_TIME 10
 
 void send_data(char *data[])
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 {
 	int geigerzaehler, gps, cps, cpm;
 	struct termios tp;
-	char buffer[100];
+	char buffer[200];
 	ssize_t length;
 	float usvhr, lon, lat;
 	struct timeval tv, ct;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	geigerzaehler = open(argv[1], O_RDONLY | O_NOCTTY |O_NDELAY);
+	geigerzaehler = open(argv[1], O_RDONLY | O_NOCTTY);
 	if (geigerzaehler < 0) {
 		perror(argv[1]);
 	}
@@ -75,9 +75,11 @@ int main(int argc, char *argv[])
 	tp.c_iflag = IGNPAR | ICRNL;
 	tp.c_lflag = ICANON;
 
+	tp.c_cc[VTIME] = 1;
+
 	tcsetattr(geigerzaehler, TCSANOW, &tp);
 
-	gps = open(argv[2], O_RDONLY | O_NOCTTY |O_NDELAY);
+	gps = open(argv[2], O_RDONLY | O_NOCTTY);
 	if (gps < 0) {
 		perror(argv[2]);
 	}
@@ -88,6 +90,8 @@ int main(int argc, char *argv[])
 	tp.c_cflag = GPS_BAUDRATE | CRTSCTS | CS8 | CLOCAL | CREAD;
 	tp.c_iflag = IGNPAR | ICRNL;
 	tp.c_lflag = ICANON;
+
+	tp.c_cc[VTIME] = 1;
 
 	tcsetattr(gps, TCSANOW, &tp);
 
@@ -115,9 +119,10 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Error opening device: %s\n", argv[2]);
                         return -1;
 		}
-		if (length > 0) {
+		if (length > 0 && buffer[0] != '\n') {
 			/* parse gps data */
 			buffer[length] = '\0';
+			printf("%s", buffer);
 		}
 
 		gettimeofday(&ct, NULL);
