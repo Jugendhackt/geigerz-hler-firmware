@@ -126,13 +126,13 @@ int main(int argc, char *argv[])
 
 		if (length < 0) {
 			fprintf(stderr, "Error opening device: %s\n", argv[2]);
-                        return -1;
+			return -1;
 		}
 		if (length > 0 && buffer[0] != '\n') {
 			/* parse gps data */
 			buffer[length] = '\0';
 			nmea_parse(&parser, buffer, (int)strlen(buffer), &info);
-        		nmea_info2pos(&info, &pos);
+			nmea_info2pos(&info, &pos);
 
 			printf("%f %f", info.lat, info.lon);
 			
@@ -148,16 +148,9 @@ int main(int argc, char *argv[])
 
 			uint32_t timestamp = (unsigned)time(NULL);
 
-    			size_t needed = snprintf(NULL, 0, "{\"location\":\"POINT(%f %f)\", \"time\":%u", pos.lat, pos.lon, timestamp);
+    			sprintf(buffer, "{\"location\":\"POINT(%f %f)\", \"uSv\": %f, \"time\":%u}", pos.lat, pos.lon, usvhr, timestamp);
 
-    			char *str = malloc(needed);
-
-    			sprintf(str, "{\"location\":\"POINT(%f %f)\", \"uSv\": %f, \"time\":%u}", pos.lat, pos.lon, usvhr, timestamp);
-
-			send_data(str);
-
-			free(str);
-
+			send_data(buffer);
 		}
 	}
 
